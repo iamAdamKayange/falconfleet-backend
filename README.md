@@ -4,7 +4,7 @@ FalconFleet Express API with PostgreSQL persistence, nine roles, tenant and assi
 
 ## Local setup
 
-Requires Node.js 24 or newer.
+Requires Node.js 22.9 or newer; Node.js 24 is recommended.
 
 ```sh
 npm ci

@@ -1,13 +1,19 @@
 # Hetzner backend deployment
 
-Use a reviewed release at /opt/falconfleet-backend. Install Node.js 24+ at /usr/bin/node and run npm ci in this directory. Preserve the previous release for rollback.
+Use a reviewed release at /opt/falconfleet-backend. Install Node.js 22.9+ at /usr/bin/node and run npm ci in this directory. Node.js 24 is recommended. Preserve the previous release for rollback.
 
-Create /etc/falconfleet/api.env using api.env.example and privately enter the real PostgreSQL URL and frontend HTTPS APP_ORIGIN. Do not commit or publish these values.
+Create /etc/falconfleet/api.env using api.env.example and privately enter the real PostgreSQL URL and frontend HTTPS APP_ORIGIN. Do not commit or publish these values. Keep an existing env file when updating the application. Set PORT=4001 if 4000 belongs to another app.
 
-Run bash deploy/install-api.sh as root. It verifies production configuration and a PostgreSQL transaction, runs tests, installs/restarts the falconfleet-api systemd service and checks /v2/health on loopback port 4000. It does not install Node or change DNS, firewall, SSH or existing proxy configuration.
+To configure Adam Kayange (adamkayange223@gmail.com) as the first Platform Admin plus eight demo roles, run `node deploy/configure-accounts.mjs` as root. It adds the account flags and generates separate random passwords directly in the private env file, retaining existing nonempty passwords. View them privately with `nano /etc/falconfleet/api.env`. Passwords must have 10–128 characters. Set `SEED_DEMO_ACCOUNTS=false` if demo accounts are not desired. This flag controls creation only; disable existing demo users through account management when retiring the demo.
 
-Bootstrap the initial administrator privately using the same database environment and ADMIN_EMAIL, ADMIN_NAME and ADMIN_PASSWORD. From the release directory run node --env-file=/etc/falconfleet/api.env src/bootstrap-admin.js with these admin values supplied privately through the environment. Unset ADMIN_PASSWORD afterwards.
+Demo emails use `ROLE@demo.falconfleet.test`: school_admin, transport_officer, dispatcher, driver, maintenance_officer, finance_officer, guardian and auditor. Their passwords use the corresponding `DEMO_ROLE_PASSWORD` env keys in uppercase. These users belong to a separate FalconFleet Demo School and receive a welcome notification; no pupils or tracking events are inserted. School Admin still enrolls in MFA in production.
 
-Configure the HTTPS frontend proxy so /api/* maps to http://127.0.0.1:4000/v2/*. Alternatively, the frontend Next.js proxy uses API_INTERNAL_URL=http://127.0.0.1:4000. Keep port 4000 private. Verify login, MFA, logout and permissions over HTTPS before enabling real users.
+Run bash deploy/install-api.sh as root. It runs tests, automatically applies pending migrations, verifies a PostgreSQL transaction, provisions configured accounts, installs/restarts the falconfleet-api systemd service and checks /v2/health on the configured loopback PORT (default 4000). Migration or provisioning errors stop activation. The installer refuses an occupied port on first installation. It does not install Node or change DNS, firewall, SSH or existing proxy configuration.
+
+Versioned migrations live in database/migrations and are recorded with checksums in falconfleet_migrations. They run under a PostgreSQL advisory lock; each file commits atomically and is skipped after success. API startup also applies pending migrations, so direct service restarts have the same schema protection. Never edit an already applied migration; add the next numbered SQL file without BEGIN/COMMIT. The legacy database/001_initial.sql is not part of the v2 migration sequence. Existing identity data is preserved.
+
+Provisioning runs when BOOTSTRAP_ADMIN=true or SEED_DEMO_ACCOUNTS=true. Redeploys preserve existing account passwords, disabled status and MFA; changing env values does not reset accounts. After initial creation you can remove account password variables and set both flags false. The manual src/bootstrap-admin.js remains available as an alternative for a fresh database.
+
+Configure the HTTPS frontend proxy so /api/* maps to http://127.0.0.1:PORT/v2/*. Alternatively, the frontend Next.js proxy uses API_INTERNAL_URL=http://127.0.0.1:PORT. Replace PORT with the configured API port (e.g. 4001). Keep that port private. Verify login, MFA, logout and permissions over HTTPS before enabling real users.
 
 For rollback, restore the previous release at /opt/falconfleet-backend and restart falconfleet-api. Review journalctl -u falconfleet-api if the health check fails. Database backups and restore rehearsal must be arranged separately.

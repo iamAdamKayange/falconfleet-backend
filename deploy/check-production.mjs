@@ -7,7 +7,8 @@ if (origin.protocol !== 'https:' || origin.origin !== process.env.APP_ORIGIN)
   throw Error('APP_ORIGIN must be an HTTPS origin without a trailing slash or path');
 if (process.env.DEMO_MODE === 'true') throw Error('Disable DEMO_MODE for production');
 const port = Number(process.env.PORT || 4000);
-if (port !== 4000) throw Error('Deployment proxy and health checks require PORT=4000');
+if (!Number.isInteger(port) || port < 1024 || port > 65535)
+  throw Error('PORT must be an integer from 1024 to 65535');
 const store = createIdentityStore(process.env.DATABASE_URL);
 try {
   await store.init();

@@ -6,6 +6,7 @@ import {
   timingSafeEqual,
 } from "node:crypto";
 import { promisify } from "node:util";
+import { migrateDatabase } from "./migrations.js";
 const scrypt = promisify(scryptCallback);
 export async function hashPassword(password) {
   const salt = randomBytes(16).toString("hex");
@@ -55,9 +56,12 @@ export function createIdentityStore(connectionString) {
     kind: pool ? "postgres" : "memory",
     async init() {
       if (pool) {
-        await pool.query(
-          "CREATE TABLE IF NOT EXISTS falconfleet_identity (id integer PRIMARY KEY CHECK (id=1), data jsonb NOT NULL)",
-        );
+        const client = await pool.connect();
+        try {
+          await migrateDatabase(client);
+        } finally {
+          client.release();
+        }
         await pool.query(
           "INSERT INTO falconfleet_identity(id,data) VALUES(1,$1) ON CONFLICT DO NOTHING",
           [emptyState()],
