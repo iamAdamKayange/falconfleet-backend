@@ -14,6 +14,8 @@ Versioned migrations live in database/migrations and are recorded with checksums
 
 Provisioning runs when BOOTSTRAP_ADMIN=true or SEED_DEMO_ACCOUNTS=true. Redeploys preserve existing account passwords, disabled status and MFA; changing env values does not reset accounts. After initial creation you can remove account password variables and set both flags false. The manual src/bootstrap-admin.js remains available as an alternative for a fresh database.
 
+For an explicit reset of the configured Adam Kayange admin and all eight demo accounts, supply `ACCOUNT_PASSWORD` privately and run `node deploy/set-passwords.mjs` as root. This updates all nine hashes in PostgreSQL and all nine password values in the private env file. It revokes their sessions and preserves MFA and disabled status. Restart falconfleet-api afterwards to reload the environment and clear stale login throttles. The password is never stored in the repository or printed by the script. This command is manual and is not run by normal deployment.
+
 Configure the HTTPS frontend proxy so /api/* maps to http://127.0.0.1:PORT/v2/*. Alternatively, the frontend Next.js proxy uses API_INTERNAL_URL=http://127.0.0.1:PORT. Replace PORT with the configured API port (e.g. 4001). Keep that port private. Verify login, MFA, logout and permissions over HTTPS before enabling real users.
 
 For rollback, restore the previous release at /opt/falconfleet-backend and restart falconfleet-api. Review journalctl -u falconfleet-api if the health check fails. Database backups and restore rehearsal must be arranged separately.
