@@ -4,7 +4,6 @@ set -euo pipefail
 [[ $EUID -eq 0 ]] || { echo 'Run as root.' >&2; exit 1; }
 cd /opt/falconfleet-backend
 command -v node >/dev/null
-command -v curl >/dev/null
 command -v runuser >/dev/null
 /usr/bin/node -e 'const [major,minor]=process.versions.node.split(".").map(Number); process.exit(major>22 || (major===22 && minor>=9) ? 0 : 1)' || { echo 'Node 22.9+ required at /usr/bin/node.' >&2; exit 1; }
 [[ -f src/secure-server.js && -d node_modules ]] || { echo 'Extract release and run npm ci first.' >&2; exit 1; }
@@ -34,10 +33,7 @@ systemctl daemon-reload
 systemctl enable falconfleet-api
 systemctl restart falconfleet-api
 for attempt in {1..20}; do
-  if curl --fail --silent --max-time 5 "http://127.0.0.1:$api_port/v2/health" | /usr/bin/node --input-type=module -e '
-    let text=""; for await (const chunk of process.stdin) text+=chunk;
-    const health=JSON.parse(text); if(health.status!=="ok" || health.storage!=="postgres") process.exit(1);
-  '; then
+  if /usr/bin/node deploy/check-health.mjs "$api_port"; then
     echo "API healthy on 127.0.0.1:$api_port with PostgreSQL. Configure the reviewed HTTPS proxy for this port next."
     exit 0
   fi
