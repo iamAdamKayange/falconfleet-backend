@@ -1,0 +1,23 @@
+[Unit]
+Description=FalconFleet API
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=falconfleet
+Group=falconfleet
+WorkingDirectory=/opt/falconfleet-backend
+EnvironmentFile=/etc/falconfleet/api.env
+ExecStart=/usr/bin/node /opt/falconfleet-backend/src/secure-server.js
+Restart=on-failure
+RestartSec=5
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+UMask=0077
+
+[Install]
+WantedBy=multi-user.target
+
